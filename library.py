@@ -1,8 +1,12 @@
-﻿from openai import OpenAI
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
 import streamlit as st
 
+load_dotenv()
+
 # 👉 OpenAI 클라이언트
-client = OpenAI(api_key="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")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 👉 프롬프트 불러오기
 def load_prompt(character):
@@ -96,4 +100,5 @@ for msg in st.session_state.messages[1:]:
     st.markdown(f'<div class="{cls}">{msg["content"]}</div>',
                 unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
+
 
