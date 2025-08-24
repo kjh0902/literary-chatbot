@@ -20,7 +20,7 @@ from openai import OpenAI
 # ================= 기본 설정 =================
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
 PERSIST_DIR   = os.getenv("PERSIST_DIR") or os.path.join(BASE_DIR, "rag", ".chroma")
-COLLECTION    = os.getenv("COLLECTION", "library-all")
+COLLECTION    = os.getenv("COLLECTION", "default")
 MODEL         = os.getenv("MODEL", "gpt-4o")
 TOP_K         = int(os.getenv("TOP_K", "6"))
 EMB_MODEL     = "text-embedding-3-small"
@@ -254,6 +254,7 @@ st.sidebar.write({
     "has_bm25": bm25 is not None,
     "filtered_docs": len(filtered_docs),
 })
+
 
 
 
