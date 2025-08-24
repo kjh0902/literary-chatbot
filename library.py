@@ -10,7 +10,9 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 👉 프롬프트 불러오기
 def load_prompt(character):
-    path = f"C:/Users/김준형/Documents/공모전 및 프로젝트/도서관/prompts/{character}.txt"
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
+    PROMPT_DIR = os.path.join(BASE_DIR, "prompts")
+    path = os.path.join(PROMPT_DIR, f"{character}.txt")
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
@@ -100,5 +102,6 @@ for msg in st.session_state.messages[1:]:
     st.markdown(f'<div class="{cls}">{msg["content"]}</div>',
                 unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
+
 
 
