@@ -18,8 +18,8 @@ load_dotenv()
 
 
 # ---------- Config ----------
-DATA_DIR      = os.getenv("DATA_DIR", "RAG/.data")
-ARTIFACT_DIR  = os.getenv("ARTIFACT_DIR", "RAG/.artifacts")
+DATA_DIR      = os.getenv("DATA_DIR", "rag/.data")
+ARTIFACT_DIR  = os.getenv("ARTIFACT_DIR", "rag/.artifacts")
 MAX_CHARS     = int(os.getenv("MAX_CHARS", "1200"))
 OVERLAP       = int(os.getenv("OVERLAP", "150"))
 EMB_MODEL     = os.getenv("EMB_MODEL", "text-embedding-3-small")
@@ -240,3 +240,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
