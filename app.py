@@ -1,3 +1,13 @@
+try:
+    import pysqlite3  # type: ignore
+    import sys
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except Exception:
+    pass
+
+import sqlite3, streamlit as st
+st.sidebar.write("sqlite3 version:", sqlite3.sqlite_version)
+
 # app.py
 # RAG 검색 + 페르소나 주입 + 답변 생성
 from dotenv import load_dotenv
@@ -189,5 +199,6 @@ if st.button("보내기", type="primary") and query.strip():
     st.session_state.history.append({"role": "assistant", "content": ans})
 
     st.rerun()   # ✅ 최신 Streamlit 버전에서는 이렇게
+
 
 
