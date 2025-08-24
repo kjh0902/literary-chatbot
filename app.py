@@ -10,7 +10,8 @@ import streamlit as st
 st.set_page_config(page_title="📚 소설 캐릭터 챗봇", layout="centered")
 
 import sqlite3
-    
+st.write("sqlite3 version:", sqlite3.sqlite_version)
+
 # RAG 검색 + 페르소나 주입 + 답변 생성
 from dotenv import load_dotenv
 load_dotenv()
@@ -257,6 +258,7 @@ st.sidebar.write({
     "has_bm25": bm25 is not None,
     "filtered_docs": len(filtered_docs),
 })
+
 
 
 
