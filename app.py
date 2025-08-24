@@ -18,7 +18,6 @@ PERSIST_DIR   = os.getenv("PERSIST_DIR", os.path.join(BASE_DIR, "..", "rag", ".c
 COLLECTION    = os.getenv("COLLECTION", "library-all")
 MODEL         = os.getenv("MODEL", "gpt-4o")
 TOP_K         = int(os.getenv("TOP_K", "6"))
-SPOILER_LEVEL = int(os.getenv("SPOILER_LEVEL", "3"))
 EMB_MODEL     = "text-embedding-3-small"
 
 WORK_ID_MAP = {
@@ -68,8 +67,8 @@ def hybrid_retrieve(query, top_k, work_id=None):
     hits = []
     for did, _ in fused:
         txt, meta = id2doc[did]
-        if meta.get("spoiler_level", 3) <= SPOILER_LEVEL:
-            hits.append((did, txt, meta))
+        # ✅ 스포일러 레벨 조건 제거 → 모든 텍스트 포함
+        hits.append((did, txt, meta))
         if len(hits) >= top_k:
             break
     return hits
