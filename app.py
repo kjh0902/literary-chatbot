@@ -60,8 +60,6 @@ all_ids   = results.get("ids", []) or []
 all_docs  = results.get("documents", []) or []
 all_metas = results.get("metadatas", []) or []
 
-st.sidebar.write("loaded_from_chroma:", len(all_docs))
-
 # 안전 필터링 + 토큰화 (bm25 ZeroDivisionError 방지)
 filtered_ids, filtered_docs, filtered_metas, tokenized_docs = [], [], [], []
 for doc_id, doc, meta in zip(all_ids, all_docs, all_metas):
@@ -76,8 +74,6 @@ for doc_id, doc, meta in zip(all_ids, all_docs, all_metas):
     filtered_docs.append(doc)
     filtered_metas.append(meta or {})
     tokenized_docs.append(toks)
-
-st.sidebar.write("after_filter:", len(filtered_docs))
 
 bm25 = None
 if tokenized_docs:
@@ -245,14 +241,7 @@ if st.button("보내기", type="primary") and query.strip():
 
     st.rerun()
 
-# 사이드바 진단
-st.sidebar.write({
-    "PERSIST_DIR": PERSIST_DIR,
-    "COLLECTION": COLLECTION,
-    "TOP_K": TOP_K,
-    "has_bm25": bm25 is not None,
-    "filtered_docs": len(filtered_docs),
-})
+
 
 
 
