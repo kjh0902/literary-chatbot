@@ -1,3 +1,11 @@
+try:
+    __import__("pysqlite3")
+    import sys as _sys
+    _sys.modules["sqlite3"] = _sys.modules.pop("pysqlite3")
+except Exception as _e:
+    # 실패해도 진행은 하되, 로그 확인용
+    print("pysqlite3 patch failed:", _e)
+
 import streamlit as st
 st.set_page_config(page_title="📚 소설 캐릭터 챗봇", layout="centered")
 
@@ -249,6 +257,7 @@ st.sidebar.write({
     "has_bm25": bm25 is not None,
     "filtered_docs": len(filtered_docs),
 })
+
 
 
 
