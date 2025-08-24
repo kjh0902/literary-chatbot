@@ -170,7 +170,7 @@ def generate(messages):
         return comp.choices[0].message.content.strip()
 
 # ================= Streamlit UI =================
-st.set_page_config(page_title="📚 소설 캐릭터 챗봇", layout="centered")
+
 
 # 👉 카톡 스타일 CSS
 st.markdown("""
@@ -249,6 +249,7 @@ st.sidebar.write({
     "has_bm25": bm25 is not None,
     "filtered_docs": len(filtered_docs),
 })
+
 
 
 
