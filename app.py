@@ -1,11 +1,13 @@
+import streamlit as st
+st.set_page_config(page_title="📚 소설 캐릭터 챗봇", layout="centered")
+
 try:
     import pysqlite3  # type: ignore
     import sys
     sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 except Exception:
     pass
-
-import sqlite3, streamlit as st
+    
 # RAG 검색 + 페르소나 주입 + 답변 생성
 from dotenv import load_dotenv
 load_dotenv()
@@ -247,5 +249,6 @@ st.sidebar.write({
     "has_bm25": bm25 is not None,
     "filtered_docs": len(filtered_docs),
 })
+
 
 
