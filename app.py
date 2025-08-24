@@ -6,21 +6,14 @@ except Exception:
     pass
 
 import sqlite3, streamlit as st
-st.sidebar.write("sqlite3 version:", sqlite3.sqlite_version)
-
-# app.py
 # RAG 검색 + 페르소나 주입 + 답변 생성
 from dotenv import load_dotenv
 load_dotenv()
 
-import os
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+import os, re
 import chromadb
-import streamlit as st
 from rank_bm25 import BM25Okapi
-import re
 from openai import OpenAI
-oa = OpenAI()
 
 # ================= 기본 설정 =================
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
@@ -30,26 +23,21 @@ MODEL         = os.getenv("MODEL", "gpt-4o")
 TOP_K         = int(os.getenv("TOP_K", "6"))
 EMB_MODEL     = "text-embedding-3-small"
 
+# OpenAI
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+oa = OpenAI()
+
 WORK_ID_MAP = {
     "지구 끝의 온실": "jigu-ggut-onshil",
     "종의 기원": "jong-ui-giwon",
     "소년이 온다": "so-nyeon-i-onda"
 }
 
-# ================= Chroma 로드 =================
-client = chromadb.PersistentClient(path=PERSIST_DIR)
-col = client.get_or_create_collection(name=COLLECTION, embedding_function=None)
+# ================= 유틸/토큰화 =================
+def tokenize(text: str):
+    # 영문/숫자/한글만 추출 → 소문자 → 토큰 리스트
+    return re.findall(r"[0-9A-Za-z가-힣]+", (text or "").lower())
 
-results = col.get(include=["documents","metadatas"], limit=999999)
-all_ids, all_docs, all_metas = results["ids"], results["documents"], results["metadatas"]
-
-bm25 = BM25Okapi([
-    [tok for tok in re.sub(r"[^0-9a-zA-Z가-힣\s]", " ", d.lower()).split()]
-    for d in all_docs
-])
-id2doc = {i: (t, m) for i, t, m in zip(all_ids, all_docs, all_metas)}
-
-# ================= 검색 함수 =================
 def reciprocal_rank_fusion(results_lists, k=60):
     scores = {}
     for res in results_lists:
@@ -57,42 +45,93 @@ def reciprocal_rank_fusion(results_lists, k=60):
             scores[doc_id] = scores.get(doc_id, 0) + 1.0/(k+rank)
     return sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
+# ================= Chroma 로드 =================
+client = chromadb.PersistentClient(path=PERSIST_DIR)
+col = client.get_or_create_collection(name=COLLECTION, embedding_function=None)
+
+results = col.get(include=["documents","metadatas"], limit=999_999)
+all_ids   = results.get("ids", []) or []
+all_docs  = results.get("documents", []) or []
+all_metas = results.get("metadatas", []) or []
+
+st.sidebar.write("loaded_from_chroma:", len(all_docs))
+
+# 안전 필터링 + 토큰화 (bm25 ZeroDivisionError 방지)
+filtered_ids, filtered_docs, filtered_metas, tokenized_docs = [], [], [], []
+for doc_id, doc, meta in zip(all_ids, all_docs, all_metas):
+    if not isinstance(doc, str):
+        continue
+    if not doc.strip():
+        continue
+    toks = tokenize(doc)
+    if not toks:
+        continue
+    filtered_ids.append(doc_id)
+    filtered_docs.append(doc)
+    filtered_metas.append(meta or {})
+    tokenized_docs.append(toks)
+
+st.sidebar.write("after_filter:", len(filtered_docs))
+
+bm25 = None
+if tokenized_docs:
+    bm25 = BM25Okapi(tokenized_docs)
+else:
+    st.warning("BM25 인덱스를 만들 문서가 없습니다. 데이터 경로 또는 문서 내용을 확인하세요.")
+
+# id -> (text, meta)
+id2doc = {i: (t, m) for i, t, m in zip(filtered_ids, filtered_docs, filtered_metas)}
+
+# ================= 검색 함수 =================
 def hybrid_retrieve(query, top_k, work_id=None):
     if not query or not query.strip():
         return []
+
+    # 1) 벡터 검색
     emb = oa.embeddings.create(model=EMB_MODEL, input=query).data[0].embedding
-    vec_res = col.query(query_embeddings=[emb], n_results=top_k*3,
-                        where={"work_id": work_id} if work_id else None)
-    vec_ids = vec_res["ids"][0] if vec_res["ids"] else []
+    vec_res = col.query(
+        query_embeddings=[emb],
+        n_results=top_k * 3,
+        where={"work_id": work_id} if work_id else None
+    )
+    vec_ids = vec_res["ids"][0] if vec_res.get("ids") else []
 
-    tokens = [tok for tok in re.sub(r"[^0-9a-zA-Z가-힣\s]", " ", query.lower()).split()]
-    scores = bm25.get_scores(tokens)
-    ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:top_k*3]
-    bm25_ids = [
-        all_ids[i] for i, _ in ranked
-        if (not work_id or all_metas[i].get("work_id") == work_id)
-    ]
+    # 2) BM25 검색 (있을 때만)
+    bm25_ids = []
+    if bm25 is not None:
+        toks = tokenize(query)
+        if toks:
+            scores = bm25.get_scores(toks)
+            ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:top_k*3]
+            # ranked의 인덱스는 filtered_docs/tokenized_docs 기준
+            bm25_ids = [
+                filtered_ids[i] for i, _ in ranked
+                if (not work_id or (filtered_metas[i].get("work_id") == work_id))
+            ]
 
+    # 3) RRF 융합
     fused = reciprocal_rank_fusion([vec_ids, bm25_ids])
+
     hits = []
     for did, _ in fused:
-        txt, meta = id2doc[did]
-        # ✅ 스포일러 레벨 조건 제거 → 모든 텍스트 포함
-        hits.append((did, txt, meta))
-        if len(hits) >= top_k:
-            break
+        if did in id2doc:
+            txt, meta = id2doc[did]
+            hits.append((did, txt, meta))
+            if len(hits) >= top_k:
+                break
     return hits
 
 # ================= 프롬프트 생성 =================
 def make_prompt(query, hits, work_id=None, speak_as=None, history=[]):
     persona_block = ""
     if speak_as and work_id:
-        persos = [
-            txt for i, (txt, meta) in id2doc.items()
-            if meta.get("work_id") == work_id
-            and meta.get("kind") in ["persona", "characters_raw"]
-            and (speak_as in meta.get("character", ""))
-        ]
+        # id2doc를 순회해 페르소나/등장인물 원문을 찾음
+        persos = []
+        for _id, (txt, meta) in id2doc.items():
+            if meta.get("work_id") == work_id and meta.get("kind") in ["persona", "characters_raw"]:
+                ch = meta.get("character", "") or ""
+                if speak_as in ch:
+                    persos.append(txt)
         if persos:
             persona_block = f"[인물 페르소나: {speak_as}]\n{persos[0]}"
 
@@ -198,7 +237,15 @@ if st.button("보내기", type="primary") and query.strip():
     st.session_state.history.append({"role": "user", "content": query})
     st.session_state.history.append({"role": "assistant", "content": ans})
 
-    st.rerun()   # ✅ 최신 Streamlit 버전에서는 이렇게
+    st.rerun()
 
+# 사이드바 진단
+st.sidebar.write({
+    "PERSIST_DIR": PERSIST_DIR,
+    "COLLECTION": COLLECTION,
+    "TOP_K": TOP_K,
+    "has_bm25": bm25 is not None,
+    "filtered_docs": len(filtered_docs),
+})
 
 
