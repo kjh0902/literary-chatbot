@@ -163,7 +163,7 @@ def make_prompt(query, hits, work_id=None, speak_as=None, history=[]):
 # ================= 답변 생성 =================
 def generate(messages):
     try:
-        resp = oa.responses.create(model=MODEL, input=messages)
+        resp = oa.responses.create(model=MODEL, input=messages, temperature=0)
         return getattr(resp, "output_text", "").strip()
     except Exception:
         comp = oa.chat.completions.create(model=MODEL, messages=messages)
@@ -240,6 +240,7 @@ if st.button("보내기", type="primary") and query.strip():
     st.session_state.history.append({"role": "assistant", "content": ans})
 
     st.rerun()
+
 
 
 
