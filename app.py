@@ -154,7 +154,7 @@ def make_prompt(query, hits, work_id=None, speak_as=None, history=[]):
         "당신은 소설 속 인물의 말투를 재현하는 AI입니다.\n"
         "컨텍스트를 근거로 사용하세요.\n"
         "당신이 소설 속 등장인물이라고 생각하세요.\n"
-        "대화할 때는 해당 인물의 말투/가치관을 반영해 1~2문장 이내로 대답하세요.\n"
+        "대화할 때는 해당 인물의 말투/가치관을 반영해 2~3문장 이내로 대답하세요.\n"
         "답할때는 대화하듯이 자연스럽게 얘기해"
     )
     if persona_block:
@@ -257,6 +257,7 @@ st.sidebar.write({
     "has_bm25": bm25 is not None,
     "filtered_docs": len(filtered_docs),
 })
+
 
 
 
