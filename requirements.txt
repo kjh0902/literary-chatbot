@@ -2,7 +2,7 @@
 streamlit
 openai
 python-dotenv
-
+pysqlite3-binary
 chromadb
 numpy
 pydantic
