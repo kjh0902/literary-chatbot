@@ -8,7 +8,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 import chromadb
 import streamlit as st
 from rank_bm25 import BM25Okapi
-
+import re
 from openai import OpenAI
 oa = OpenAI()
 
@@ -189,3 +189,4 @@ if st.button("보내기", type="primary") and query.strip():
     st.session_state.history.append({"role": "assistant", "content": ans})
 
     st.rerun()   # ✅ 최신 Streamlit 버전에서는 이렇게
+
