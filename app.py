@@ -53,10 +53,6 @@ def reciprocal_rank_fusion(results_lists, k=60):
 # ================= Chroma 로드 =================
 client = chromadb.PersistentClient(path=PERSIST_DIR)
 
-cols = client.list_collections()
-for c in cols:
-    st.sidebar.write(f"collection: {c.name}, count: {c.count()}")
-
 col = client.get_or_create_collection(name=COLLECTION, embedding_function=None)
 
 results = col.get(include=["documents","metadatas"], limit=999_999)
@@ -257,6 +253,7 @@ st.sidebar.write({
     "has_bm25": bm25 is not None,
     "filtered_docs": len(filtered_docs),
 })
+
 
 
 
