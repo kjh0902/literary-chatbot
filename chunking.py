@@ -1,14 +1,3 @@
-# stage1_chunk_and_embed.py
-# 사용법:
-#   OPENAI_API_KEY=... python stage1_chunk_and_embed.py
-# 환경변수(선택):
-#   DATA_DIR=rag/.data           # JSONL 모아둔 폴더
-#   ARTIFACT_DIR=rag/.artifacts  # 출력 폴더
-#   MAX_CHARS=1200 OVERLAP=150   # 청킹 파라미터
-#   EMB_MODEL=text-embedding-3-small
-#   BATCH_SIZE=64
-#   INCLUDE_SCENES=1 INCLUDE_CHAPTERS=1 INCLUDE_CHARACTERS=1 INCLUDE_META=1 INCLUDE_FULLTEXT=1
-
 import os, glob, json, re, uuid
 from dataclasses import dataclass
 from typing import List, Dict, Any
@@ -16,8 +5,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
-
-# ---------- Config ----------
 DATA_DIR      = os.getenv("DATA_DIR", "rag/.data")
 ARTIFACT_DIR  = os.getenv("ARTIFACT_DIR", "rag/.artifacts")
 MAX_CHARS     = int(os.getenv("MAX_CHARS", "1200"))
@@ -33,7 +20,6 @@ INCLUDE_FULLTEXT   = os.getenv("INCLUDE_FULLTEXT", "1") == "1"
 
 os.makedirs(ARTIFACT_DIR, exist_ok=True)
 
-# ---------- Helpers ----------
 def find_files(pattern: str) -> List[str]:
     return sorted(glob.glob(os.path.join(DATA_DIR, pattern)))
 
@@ -58,15 +44,10 @@ def sent_split(text: str) -> List[str]:
 
 def sent_split(text: str):
     text = text.replace("\r\n", "\n").strip()
-    # 1) 일반 문장부호 뒤 공백 → 구분자 표시
     text = re.sub(r'([.!?…])\s+', r'\1¶', text)
-    # 2) 한국어 종결 패턴 예: '다.' 뒤 공백 → 구분자 표시
     text = re.sub(r'(다\.)\s+', r'\1¶', text)
-    # 3) 빈 줄(단락 경계)도 문장 경계로 취급
     text = re.sub(r'\n{2,}', '¶', text)
-    # 4) 구분자로 split
     parts = [p.strip() for p in text.split('¶') if p.strip()]
-    # 폴백: 표식이 거의 없으면 줄바꿈 기준으로 분할
     if len(parts) <= 1:
         parts = [p.strip() for p in re.split(r'\n+', text) if p.strip()]
     return parts
@@ -94,11 +75,9 @@ class Chunk:
     text: str
     metadata: Dict[str, Any]
 
-# ---------- Load → Chunk ----------
 def load_all_chunks() -> List[Chunk]:
     chunks: List[Chunk] = []
 
-    # 1) 장면(권장 인덱스)
     if INCLUDE_SCENES:
         for p in find_files("*_scenes_*.jsonl"):
             for row in read_jsonl(p):
@@ -121,7 +100,6 @@ def load_all_chunks() -> List[Chunk]:
                         text=ch, metadata=meta
                     ))
 
-    # 2) 챕터(장면 미비시 보조지만, 요청에 따라 항상 포함)
     if INCLUDE_CHAPTERS:
         for p in find_files("*_chapters_*.jsonl"):
             for row in read_jsonl(p):
@@ -141,7 +119,6 @@ def load_all_chunks() -> List[Chunk]:
                         text=ch, metadata=meta
                     ))
 
-    # 3) 등장인물(페르소나/설명도 검색에 포함)
     if INCLUDE_CHARACTERS:
         for p in find_files("*_characters_*.jsonl"):
             for row in read_jsonl(p):
@@ -161,7 +138,6 @@ def load_all_chunks() -> List[Chunk]:
                         text=ch, metadata=meta
                     ))
 
-    # 4) 메타(섹션 RAW들: overview_raw/chapters_raw/scenes_raw/characters_raw)
     if INCLUDE_META:
         for p in find_files("*_meta_*.jsonl"):
             for row in read_jsonl(p):
@@ -180,7 +156,6 @@ def load_all_chunks() -> List[Chunk]:
                             text=ch, metadata=meta
                         ))
 
-    # 5) 전체 원문(백업/롱패스지식; 중복 가능성 있으므로 kind로 구분)
     if INCLUDE_FULLTEXT:
         for p in find_files("*_fulltext*.jsonl"):
             for row in read_jsonl(p):
@@ -200,7 +175,6 @@ def load_all_chunks() -> List[Chunk]:
 
     return chunks
 
-# ---------- Embedding ----------
 def embed_texts(texts: List[str], model: str = EMB_MODEL, batch_size: int = BATCH_SIZE) -> List[List[float]]:
     from openai import OpenAI
     client = OpenAI()  # OPENAI_API_KEY 환경변수 필요
@@ -211,7 +185,6 @@ def embed_texts(texts: List[str], model: str = EMB_MODEL, batch_size: int = BATC
         out.extend([d.embedding for d in resp.data])
     return out
 
-# ---------- Main ----------
 def main():
     chunks = load_all_chunks()
     if not chunks:
@@ -240,4 +213,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
