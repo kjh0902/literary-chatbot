@@ -1,6 +1,3 @@
-# DB_MAKING.py
-# 2단계: JSONL (chunks + embeddings) → Chroma DB 업서트
-#        OpenAI 임베딩 직접 사용 → query도 동일한 모델로
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -12,7 +9,6 @@ from typing import List, Dict, Any
 import chromadb
 from openai import OpenAI
 
-# ---------------- Config ----------------
 ARTIFACT_DIR = os.getenv("ARTIFACT_DIR", "rag/.artifacts").replace("\\","/")
 PERSIST_DIR  = os.getenv("PERSIST_DIR", "rag/.chroma").replace("\\","/")
 COLLECTION   = os.getenv("COLLECTION", "library-all")
@@ -25,7 +21,6 @@ FILTER_KINDS = [s.strip() for s in os.getenv("FILTER_KINDS","").split(",") if s.
 
 EMB_MODEL = "text-embedding-3-small"   # OpenAI 임베딩 모델
 
-# ---------------- Helpers ----------------
 def latest(path_glob: str) -> str:
     files = sorted(glob.glob(path_glob), key=lambda p: os.path.getmtime(p))
     return files[-1] if files else ""
@@ -44,7 +39,6 @@ def kind_matches(kind: str, patterns: List[str]) -> bool:
             return True
     return False
 
-# ---------------- Main ----------------
 def main():
     chunks_file = CHUNKS_PATH or latest(f"{ARTIFACT_DIR}/chunks_*.jsonl")
     embs_file   = EMBS_PATH   or latest(f"{ARTIFACT_DIR}/embeddings_*.jsonl")
@@ -104,7 +98,6 @@ def main():
         )
     print(f"[UPSERT] {len(ids)} items → collection='{COLLECTION}' @ {PERSIST_DIR}")
 
-    # ---------------- Test Query ----------------
     client_oa = OpenAI()
     q = "기억과 상실의 주제"
     emb = client_oa.embeddings.create(model=EMB_MODEL, input=[q]).data[0].embedding
@@ -115,4 +108,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
